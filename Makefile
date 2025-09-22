@@ -10,6 +10,7 @@ SRC_C   := \
 	src/c/kernel/interrupt_handler.c \
 	src/c/drivers/keyboard/keyboard.c \
 	src/c/drivers/timer/timer.c \
+	src/c/drivers/shell/shell.c \
 	src/c/drivers/serial_port/serial_port.c
 
 OBJ_ASM := $(patsubst src/asm/%.asm, build/asm/%.o, $(SRC_ASM))
