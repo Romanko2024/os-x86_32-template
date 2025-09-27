@@ -1,6 +1,7 @@
 #include "../drivers/vga/vga.h"
 #include "shell.h" //ну тут хоч норм
 #include "../utils/mem.h"
+#include "../drivers/keyboard/keyboard.h"
 
 #define CMD_MAX_LEN 80
 #define SCREEN_ROWS 25
@@ -24,6 +25,7 @@ void shell_init() {
     vga_clear();
     cursor_row = 0;
     cursor_col = 0;
+    vga_set_cursor(cursor_row, cursor_col);  //курсор у верхній лівий кут
     cmd_len = 0;
     memset(cmd_buffer, 0, CMD_MAX_LEN);
 }
@@ -93,4 +95,10 @@ void execute_command(const char* cmd) {
         vga_print("Unknown command\n");
     }
     shell_newline();
+}
+// Адаптер для keyboard_event
+void shell_keyboard_event_handler(struct keyboard_event event) {
+    if (event.type == EVENT_KEY_PRESSED) {
+        shell_keypress(event.key_character);
+    }
 }

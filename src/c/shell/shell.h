@@ -1,7 +1,11 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-void shell_init();                 //ініц shell
-void shell_keypress(char c);       //виклик on btn press
+#include "../drivers/keyboard/keyboard.h"
+#include <stddef.h>
+
+void shell_init();
+void shell_keypress(char c);
+void shell_keyboard_event_handler(struct keyboard_event event);
 
 #endif
