@@ -8,10 +8,13 @@ SRC_C   := \
 	src/c/kernel/gdt.c \
 	src/c/kernel/exception_handler.c \
 	src/c/kernel/interrupt_handler.c \
+	src/c/kernel/kernel.c \
 	src/c/drivers/keyboard/keyboard.c \
 	src/c/drivers/timer/timer.c \
-	src/c/drivers/shell/shell.c \
-	src/c/drivers/serial_port/serial_port.c
+	src/c/shell/shell.c \
+	src/c/drivers/vga/vga.c \
+	src/c/drivers/serial_port/serial_port.c \
+	src/c/utils/mem.c
 
 OBJ_ASM := $(patsubst src/asm/%.asm, build/asm/%.o, $(SRC_ASM))
 OBJ_C   := $(patsubst %.c, build/kernel/%.o, $(SRC_C))

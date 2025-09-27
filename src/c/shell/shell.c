@@ -1,6 +1,6 @@
-#include "../../vga/vga.h"   // шлях до vga.h а де воно? а воно э?.....
+#include "../drivers/vga/vga.h"   // шлях до vga.h а де воно? а воно э?.....
 #include "shell.h" //ну тут хоч норм
-#include <string.h> //ееее
+#include "../../utils/mem.h"
 
 #define CMD_MAX_LEN 80
 #define SCREEN_ROWS 25

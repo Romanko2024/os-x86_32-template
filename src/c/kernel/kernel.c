@@ -3,9 +3,8 @@
 #include "../shell/shell.h"
 
 void kernel_main(void) {
-    vga_init();  // ініц екрана
+    vga_init();
     vga_print("Kernel has started\n");
 
-    shell_init();
-    shell_run();
+    shell_init();  // shell буде оброб клавіатурні події через key_handler
 }

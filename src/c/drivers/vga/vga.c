@@ -65,4 +65,24 @@ void vga_print(const char* str) {
         vga_putc(*str++);
     }
 }
+void vga_set_cursor(int row, int col) {
+    cursor_x = col;
+    cursor_y = row;
+}
+
+void vga_put_char_at(char c, int row, int col) {
+    if (row < 0 || row >= VGA_HEIGHT || col < 0 || col >= VGA_WIDTH) return;
+    vga_buffer[row * VGA_WIDTH + col] = vga_entry(c, 0x07);
+}
+
+void vga_copy_char(int src_row, int src_col, int dst_row, int dst_col) {
+    if (src_row < 0 || src_row >= VGA_HEIGHT || src_col < 0 || src_col >= VGA_WIDTH) return;
+    if (dst_row < 0 || dst_row >= VGA_HEIGHT || dst_col < 0 || dst_col >= VGA_WIDTH) return;
+    vga_buffer[dst_row * VGA_WIDTH + dst_col] =
+        vga_buffer[src_row * VGA_WIDTH + src_col];
+}
+
+void vga_puts(const char* str) {
+    while (*str) vga_putc(*str++);
+}
 

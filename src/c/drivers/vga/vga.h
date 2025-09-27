@@ -17,5 +17,9 @@ void vga_putc(char c);
 void vga_print(const char* str);
 void vga_clear();
 void vga_scroll();
+void vga_set_cursor(int row, int col);
+void vga_put_char_at(char c, int row, int col);
+void vga_copy_char(int src_row, int src_col, int dst_row, int dst_col);
+void vga_puts(const char* str);
 
 #endif

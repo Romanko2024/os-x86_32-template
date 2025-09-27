@@ -73,5 +73,9 @@ extern void set_interrupt_handler(u32 interrupt, void (*handler)(u32 interrupt))
  * Registers a handler for exceptions.
  */
 extern void set_exception_handler(void (*handler)(u32 interrupt, u32 error, char *message));
-
+/**
+ * Entry point for the kernel.
+ * Called by the bootloader after low-level initialization.
+ */
+extern void kernel_main();
 #endif
