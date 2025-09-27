@@ -1,7 +1,6 @@
 #include "../drivers/vga/vga.h"
 #include "shell.h" //ну тут хоч норм
 #include "../utils/mem.h"
-#include <string.h>  // для strcmp і memset
 
 #define CMD_MAX_LEN 80
 #define SCREEN_ROWS 25
@@ -49,7 +48,7 @@ void shell_keypress(char c) {
 
 // Вивід символу на екран
 void shell_put_char(char c) {
-    vga_putc_at(c, cursor_row, cursor_col);
+    vga_put_char_at(c, cursor_row, cursor_col);  // <-- використано правильну функцію
     cursor_col++;
     if (cursor_col >= SCREEN_COLS) shell_newline();
 }
@@ -70,7 +69,7 @@ void shell_backspace() {
             cursor_row--;
             cursor_col = SCREEN_COLS - 1;
         }
-        vga_putc_at(' ', cursor_row, cursor_col);
+        vga_put_char_at(' ', cursor_row, cursor_col);  // <-- правильна функція
     }
 }
 

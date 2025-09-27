@@ -34,7 +34,7 @@ void vga_scroll() {
     for (int x = 0; x < VGA_WIDTH; x++)
         vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x] = vga_entry(' ', default_color);
 
-    if (cursor_y > 0) cursor_y--;
+    cursor_y = VGA_HEIGHT - 1;
 }
 
 void vga_putc(char c) {
