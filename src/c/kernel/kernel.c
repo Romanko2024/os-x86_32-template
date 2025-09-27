@@ -7,4 +7,5 @@ void kernel_main(void) {
     vga_print("Kernel has started\n");
 
     shell_init();  // shell буде оброб клавіатурні події через key_handler
+    keyboard_set_handler(shell_keypress);
 }

@@ -27,22 +27,14 @@ void vga_clear() {
 }
 
 void vga_scroll() {
-    //if ддійшли до низу
-    if (cursor_y >= VGA_HEIGHT) {
-        //пересуваємо всі рядки на один вверх
-        for (int y = 1; y < VGA_HEIGHT; y++) {
-            for (int x = 0; x < VGA_WIDTH; x++) {
-                vga_buffer[(y - 1) * VGA_WIDTH + x] =
-                    vga_buffer[y * VGA_WIDTH + x];
-            }
-        }
-        //останній рядок пробілами
-        for (int x = 0; x < VGA_WIDTH; x++) {
-            vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x] =
-                vga_entry(' ', default_color);
-        }
-        cursor_y = VGA_HEIGHT - 1;
-    }
+    for (int y = 1; y < VGA_HEIGHT; y++)
+        for (int x = 0; x < VGA_WIDTH; x++)
+            vga_buffer[(y - 1) * VGA_WIDTH + x] = vga_buffer[y * VGA_WIDTH + x];
+
+    for (int x = 0; x < VGA_WIDTH; x++)
+        vga_buffer[(VGA_HEIGHT - 1) * VGA_WIDTH + x] = vga_entry(' ', default_color);
+
+    if (cursor_y > 0) cursor_y--;
 }
 
 void vga_putc(char c) {
@@ -84,5 +76,10 @@ void vga_copy_char(int src_row, int src_col, int dst_row, int dst_col) {
 
 void vga_puts(const char* str) {
     while (*str) vga_putc(*str++);
+}
+
+void vga_put_char_at_color(char c, int row, int col, uint8_t color) {
+    if (row < 0 || row >= VGA_HEIGHT || col < 0 || col >= VGA_WIDTH) return;
+    vga_buffer[row * VGA_WIDTH + col] = vga_entry(c, color);
 }
 
