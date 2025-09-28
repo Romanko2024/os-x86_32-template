@@ -1,5 +1,5 @@
 #include "../drivers/vga/vga.h"
-#include "shell.h" //ну тут хоч норм
+#include "shell.h"
 #include "../utils/mem.h"
 #include "../drivers/keyboard/keyboard.h"
 
@@ -53,6 +53,7 @@ void shell_put_char(char c) {
     vga_put_char_at(c, cursor_row, cursor_col);  // <-- використано правильну функцію
     cursor_col++;
     if (cursor_col >= SCREEN_COLS) shell_newline();
+    vga_set_cursor(cursor_row, cursor_col); 
 }
 
 // Перехід на новий рядок
@@ -60,6 +61,7 @@ void shell_newline() {
     cursor_col = 0;
     cursor_row++;
     if (cursor_row >= SCREEN_ROWS) scroll_screen();
+    vga_set_cursor(cursor_row, cursor_col); 
 }
 
 // Видалення символу
@@ -71,7 +73,8 @@ void shell_backspace() {
             cursor_row--;
             cursor_col = SCREEN_COLS - 1;
         }
-        vga_put_char_at(' ', cursor_row, cursor_col);  // <-- правильна функція
+        vga_put_char_at(' ', cursor_row, cursor_col);
+        vga_set_cursor(cursor_row, cursor_col);
     }
 }
 
@@ -83,18 +86,22 @@ void scroll_screen() {
 
 // Виконання команди
 void execute_command(const char* cmd) {
+    // ми вже викликали shell_newline() при натисканні Enter,
+    // тому зараз сторока для виводу — поточний cursor_row/cursor_col
     if (strcmp(cmd, "help") == 0) {
-        vga_print("Available commands: help, clear\n");
+        vga_print("Available commands: help, clear");
+        vga_putc('\n');  // або shell_newline();
     } else if (strcmp(cmd, "clear") == 0) {
         vga_clear();
         cursor_row = 0;
         cursor_col = 0;
+        vga_set_cursor(cursor_row, cursor_col);
     } else if (strlen(cmd) == 0) {
         // нічого не робимо
     } else {
-        vga_print("Unknown command\n");
+        vga_print("Unknown command");
+        vga_putc('\n');
     }
-    shell_newline();
 }
 // Адаптер для keyboard_event
 void shell_keyboard_event_handler(struct keyboard_event event) {
