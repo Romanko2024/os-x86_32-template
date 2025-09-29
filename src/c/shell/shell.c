@@ -90,7 +90,8 @@ void execute_command(const char* cmd) {
     // тому зараз сторока для виводу — поточний cursor_row/cursor_col
     if (strcmp(cmd, "help") == 0) {
         vga_print("Available commands: help, clear");
-        vga_putc('\n');  // або shell_newline();
+        vga_putc('\n');  // putc&shell_new_line
+        shell_newline();
     } else if (strcmp(cmd, "clear") == 0) {
         vga_clear();
         cursor_row = 0;
@@ -101,6 +102,7 @@ void execute_command(const char* cmd) {
     } else {
         vga_print("Unknown command");
         vga_putc('\n');
+        shell_newline();
     }
 }
 // Адаптер для keyboard_event
