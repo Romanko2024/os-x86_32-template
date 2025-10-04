@@ -2,6 +2,7 @@
 #include "shell.h"
 #include "../utils/mem.h"
 #include "../drivers/keyboard/keyboard.h"
+#include "../drivers/screensaver/screensaver.h"
 
 #define CMD_MAX_LEN 80
 #define SCREEN_ROWS 25
@@ -40,7 +41,8 @@ void shell_keypress(char c) {
         memset(cmd_buffer, 0, CMD_MAX_LEN);
     } else if (c == '\b') { // Backspace
         shell_backspace();
-    } else { // звичайний символ
+    } 
+    else { // звичайний символ
         if (cmd_len < CMD_MAX_LEN - 1) {
             cmd_buffer[cmd_len++] = c;
             shell_put_char(c);
@@ -89,17 +91,26 @@ void execute_command(const char* cmd) {
     // ми вже викликали shell_newline() при натисканні Enter,
     // тому зараз сторока для виводу — поточний cursor_row/cursor_col
     if (strcmp(cmd, "help") == 0) {
-        vga_print("Available commands: help, clear");
-        vga_putc('\n');  // putc&shell_new_line
+        vga_print("Available commands: help, clear, sleep");
+        vga_putc('\n');
         shell_newline();
-    } else if (strcmp(cmd, "clear") == 0) {
+    } 
+    else if (strcmp(cmd, "clear") == 0) {
         vga_clear();
         cursor_row = 0;
         cursor_col = 0;
         vga_set_cursor(cursor_row, cursor_col);
-    } else if (strlen(cmd) == 0) {
+    } 
+    else if (strcmp(cmd, "sleep") == 0) {
+        vga_print("Starting screensaver...");
+        vga_putc('\n');
+        shell_newline();
+        screensaver_start();
+    }
+    else if (strlen(cmd) == 0) {
         // нічого не робимо
-    } else {
+    } 
+    else {
         vga_print("Unknown command");
         vga_putc('\n');
         shell_newline();
