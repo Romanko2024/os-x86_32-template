@@ -15,7 +15,8 @@ SRC_C   := \
 	src/c/drivers/vga/vga.c \
 	src/c/drivers/serial_port/serial_port.c \
 	src/c/drivers/screensaver/screensaver.c \
-	src/c/utils/mem.c
+	src/c/utils/mem.c \
+	src/c/fs/fs.c
 
 OBJ_ASM := $(patsubst src/asm/%.asm, build/asm/%.o, $(SRC_ASM))
 OBJ_C   := $(patsubst %.c, build/kernel/%.o, $(SRC_C))

@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "shell.h": "c"
+        "shell.h": "c",
+        "timer.h": "c",
+        "fs.h": "c"
     }
 }

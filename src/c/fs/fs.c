@@ -1,6 +1,6 @@
 #include "fs.h"
-#include "../../drivers/vga/vga.h"
-#include <string.h>
+#include "../drivers/vga/vga.h"
+#include "../utils/mem.h"
 
 static File files[MAX_FILES];
 

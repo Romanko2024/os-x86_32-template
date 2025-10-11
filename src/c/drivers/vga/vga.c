@@ -75,6 +75,11 @@ void vga_print(const char* str) {
     vga_set_cursor(cursor_y, cursor_x);
 }
 
+void vga_println(const char* str) {
+    vga_print(str);
+    vga_print("\n");
+}
+
 // --- встановлення курсору ---
 void vga_set_cursor(int row, int col) {
     if (row < 0) row = 0;
