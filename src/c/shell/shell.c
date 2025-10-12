@@ -18,6 +18,16 @@ typedef struct {
 static Command commands[MAX_COMMANDS];
 static int command_count = 0;
 
+// буфер введення
+static char input_buffer[128];
+static int input_pos = 0;
+
+// Локальні змінні для курсора (щоб не чіпати VGA-драйвер)
+static int shell_cursor_row = 0;
+static int shell_cursor_col = 0;
+
+// ------------------ Реєстрація команд ------------------
+
 void register_command(const char* name, CommandHandler handler) {
     if (command_count < MAX_COMMANDS) {
         commands[command_count].name = name;
@@ -36,14 +46,14 @@ static void cmd_write(const char* args);
 static void cmd_read(const char* args);
 static void cmd_delete(const char* args);
 
-//сканкоди.........
-#ifndef SCANCODES_KNOWN
-#define SCANCODES_KNOWN 128
-#endif
+// ------------------ Ініціалізація ------------------
 
 void shell_init() {
     vga_clear();
     fs_init();
+
+    shell_cursor_row = 0;
+    shell_cursor_col = 0;
 
     register_command("help", cmd_help);
     register_command("clear", cmd_clear);
@@ -54,48 +64,64 @@ void shell_init() {
     register_command("delete", cmd_delete);
 
     vga_println("Simple shell initialized. Type 'help' for commands.");
-
-    //обробник клавіатури
     keyboard_set_handler(shell_keyboard_event_handler);
 }
 
-//скан-код в ASCII
-extern char key_to_character[];
-extern unsigned char scancode_to_key[];
-
 // ------------------ Обробка клавіш ------------------
 
-void shell_keypress(char c) {
-    static char input_buffer[128];
-    static int input_pos = 0;
+void shell_backspace() {
+    extern uint8_t cursor_x;
+    extern uint8_t cursor_y;
 
-    if (c == '\b') { // backspace
-        if (input_pos > 0) {
-            input_pos--;
-            vga_putc('\b');
-        }
+    if (cursor_x == 0 && cursor_y == 0) {
         return;
-    } else if (c == '\n') { // enter
+    }
+
+    if (cursor_x > 0) {
+        cursor_x--;
+    } else if (cursor_y > 0) {
+        cursor_y--;
+        cursor_x = VGA_WIDTH - 1;
+    }
+
+    vga_put_char_at(' ', cursor_y, cursor_x);
+    vga_set_cursor(cursor_y, cursor_x);
+}
+
+void shell_keypress(char c) {
+    if (c == '\b') { // backspace
+        shell_backspace();
+        return;
+    }
+
+    if (c == '\n') { // enter
         input_buffer[input_pos] = '\0';
         vga_putc('\n');
         execute_command(input_buffer);
         input_pos = 0;
+        shell_cursor_row++;
+        shell_cursor_col = 0;
         return;
     }
 
     if (input_pos < (int)(sizeof(input_buffer) - 1)) {
         input_buffer[input_pos++] = c;
         vga_putc(c);
+
+        shell_cursor_col++;
+        if (shell_cursor_col >= VGA_WIDTH) {
+            shell_cursor_col = 0;
+            shell_cursor_row++;
+        }
     }
 }
 
-// обробник події клавіатури
+// ------------------ Обробник подій клавіатури ------------------
+
 void shell_keyboard_event_handler(struct keyboard_event event) {
     if (event.type == EVENT_KEY_PRESSED) {
         char c = event.key_character;
-        if (c) {
-            shell_keypress(c);
-        }
+        if (c) shell_keypress(c);
     }
 }
 
@@ -140,6 +166,8 @@ static void cmd_help(const char* args) {
 static void cmd_clear(const char* args) {
     (void)args;
     vga_clear();
+    shell_cursor_row = 0;
+    shell_cursor_col = 0;
 }
 
 static void cmd_list(const char* args) {
