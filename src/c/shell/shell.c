@@ -4,6 +4,7 @@
 #include "../drivers/timer/timer.h"
 #include "../fs/fs.h"
 #include "../utils/mem.h"
+#include "../drivers/screensaver/screensaver.h"
 
 // ------------------ Система команд ------------------
 
@@ -45,6 +46,7 @@ static void cmd_create(const char* args);
 static void cmd_write(const char* args);
 static void cmd_read(const char* args);
 static void cmd_delete(const char* args);
+static void cmd_screensaver(const char* args);
 
 // ------------------ Ініціалізація ------------------
 
@@ -62,6 +64,7 @@ void shell_init() {
     register_command("write", cmd_write);
     register_command("read", cmd_read);
     register_command("delete", cmd_delete);
+    register_command("screensaver", cmd_screensaver);
 
     vga_println("Simple shell initialized. Type 'help' for commands.");
     keyboard_set_handler(shell_keyboard_event_handler);
@@ -161,6 +164,7 @@ static void cmd_help(const char* args) {
     vga_println("  read <name>    - display file content");
     vga_println("  delete <name>  - delete file");
     vga_println("  list           - list all files");
+    vga_println("  screensaver");
 }
 
 static void cmd_clear(const char* args) {
@@ -168,6 +172,11 @@ static void cmd_clear(const char* args) {
     vga_clear();
     shell_cursor_row = 0;
     shell_cursor_col = 0;
+}
+
+static void cmd_screensaver(const char* args) {
+    (void)args;
+    screensaver_start();
 }
 
 static void cmd_list(const char* args) {
