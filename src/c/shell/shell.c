@@ -23,9 +23,11 @@ static int command_count = 0;
 static char input_buffer[128];
 static int input_pos = 0;
 
-// Локальні змінні для курсора (щоб не чіпати VGA-драйвер)
-static int shell_cursor_row = 0;
-static int shell_cursor_col = 0;
+// ------------------ Допоміжні функції ------------------
+static void shell_show_prompt() {
+    vga_print("$ ");
+    input_pos = 0; // скидаємо буфер для нового вводу
+}
 
 // ------------------ Реєстрація команд ------------------
 
@@ -54,9 +56,6 @@ void shell_init() {
     vga_clear();
     fs_init();
 
-    shell_cursor_row = 0;
-    shell_cursor_col = 0;
-
     register_command("help", cmd_help);
     register_command("clear", cmd_clear);
     register_command("list", cmd_list);
@@ -67,6 +66,8 @@ void shell_init() {
     register_command("screensaver", cmd_screensaver);
 
     vga_println("Simple shell initialized. Type 'help' for commands.");
+    shell_show_prompt();
+
     keyboard_set_handler(shell_keyboard_event_handler);
 }
 
@@ -76,10 +77,10 @@ void shell_backspace() {
     extern uint8_t cursor_x;
     extern uint8_t cursor_y;
 
-    if (cursor_x == 0 && cursor_y == 0) {
+    // якщо немає введених символів — не дозволяємо стирати промт
+    if (input_pos <= 0)
         return;
-    }
-
+    // видаляємо останній символ
     if (cursor_x > 0) {
         cursor_x--;
     } else if (cursor_y > 0) {
@@ -89,6 +90,7 @@ void shell_backspace() {
 
     vga_put_char_at(' ', cursor_y, cursor_x);
     vga_set_cursor(cursor_y, cursor_x);
+    input_pos--;
 }
 
 void shell_keypress(char c) {
@@ -101,21 +103,13 @@ void shell_keypress(char c) {
         input_buffer[input_pos] = '\0';
         vga_putc('\n');
         execute_command(input_buffer);
-        input_pos = 0;
-        shell_cursor_row++;
-        shell_cursor_col = 0;
+        shell_show_prompt();
         return;
     }
 
     if (input_pos < (int)(sizeof(input_buffer) - 1)) {
         input_buffer[input_pos++] = c;
         vga_putc(c);
-
-        shell_cursor_col++;
-        if (shell_cursor_col >= VGA_WIDTH) {
-            shell_cursor_col = 0;
-            shell_cursor_row++;
-        }
     }
 }
 
@@ -170,8 +164,7 @@ static void cmd_help(const char* args) {
 static void cmd_clear(const char* args) {
     (void)args;
     vga_clear();
-    shell_cursor_row = 0;
-    shell_cursor_col = 0;
+    shell_show_prompt();
 }
 
 static void cmd_screensaver(const char* args) {
