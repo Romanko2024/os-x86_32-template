@@ -11,15 +11,24 @@ void fs_init() {
 }
 
 int fs_create(const char* name) {
+    //чи файл з таким іменем уже існує
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (files[i].used && strcmp(files[i].name, name) == 0) {
+            return -1; // файл уже існує
+        }
+    }
+
+    //не існує — створюємо новий
     for (int i = 0; i < MAX_FILES; i++) {
         if (!files[i].used) {
             strncpy(files[i].name, name, MAX_FILENAME);
             files[i].content[0] = '\0';
             files[i].used = 1;
-            return 1; // success
+            return 1; //створено
         }
     }
-    return 0; // no space
+
+    return 0; // немає місця
 }
 
 int fs_write(const char* name, const char* text) {

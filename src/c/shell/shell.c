@@ -182,10 +182,15 @@ static void cmd_create(const char* args) {
         vga_println("Usage: create <filename>");
         return;
     }
-    if (fs_create(args))
+
+    int result = fs_create(args);
+
+    if (result == 1)
         vga_println("File created.");
+    else if (result == -1)
+        vga_println("File already exists.");
     else
-        vga_println("No space or file exists.");
+        vga_println("No space left.");
 }
 
 static void cmd_write(const char* args) {
