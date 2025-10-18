@@ -197,33 +197,31 @@ void editor_keyboard_event_handler(struct keyboard_event event) {
         // відновлення клаватурного обробника вже зроблено всередині editor_finish_and_save
         return;
     }
-
+    
     //navigation
-    // '[' - вліво, ']' - вправо, ',' - вгору, '.' - вниз
-    if (event.key == KEY_LEFT_RECTANGLE_BRACKET) {
-        if (edit_offset > 0) edit_offset--;
-        editor_update_cursor_pos();
-        return;
-    }
-    if (event.key == KEY_RIGHT_RECTANGLE_BRACKET) {
-        if (edit_offset < edit_len) edit_offset++;
-        editor_update_cursor_pos();
-        return;
-    }
-    if (event.key == KEY_COMMA) {
-        // up
-        if (edit_offset >= VGA_WIDTH) edit_offset -= VGA_WIDTH;
-        else edit_offset = 0;
-        editor_update_cursor_pos();
-        return;
-    }
-    if (event.key == KEY_DOT) {
-        // down
-        if (edit_offset + VGA_WIDTH <= edit_len) edit_offset += VGA_WIDTH;
-        else edit_offset = edit_len;
-        editor_update_cursor_pos();
-        return;
-    }
+    // Переміщення курсора стрілками
+    if (event.key == KEY_ARROW_LEFT) {
+    if (edit_offset > 0) edit_offset--;
+    editor_update_cursor_pos();
+    return;
+}
+if (event.key == KEY_ARROW_RIGHT) {
+    if (edit_offset < edit_len) edit_offset++;
+    editor_update_cursor_pos();
+    return;
+}
+if (event.key == KEY_ARROW_UP) {
+    if (edit_offset >= VGA_WIDTH) edit_offset -= VGA_WIDTH;
+    else edit_offset = 0;
+    editor_update_cursor_pos();
+    return;
+}
+if (event.key == KEY_ARROW_DOWN) {
+    if (edit_offset + VGA_WIDTH <= edit_len) edit_offset += VGA_WIDTH;
+    else edit_offset = edit_len;
+    editor_update_cursor_pos();
+    return;
+}
 
     // Backspace
     if (event.key == KEY_BACKSPACE) {

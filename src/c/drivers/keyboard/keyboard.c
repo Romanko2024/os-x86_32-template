@@ -103,9 +103,15 @@ void (*custom_key_handler)(struct keyboard_event event) = 0;
 
 /* Handles the keyboard interrupt */
 void keyboard_handler(__attribute__((unused)) u32 interrupt) {
+    static u8 extended = 0;
     const u8 scancode = in(KEYBOARD_DATA_PORT);
+
+    if (scancode == 0xE0) { // початок розширеного коду
+        extended = 1;
+        return;
+    }
+
     if (custom_key_handler != 0) {
-        // 0x80 bit says it's released, otherwise it's pressed
         enum key_event_type event_type;
         if (scancode & 0x80) {
             event_type = EVENT_KEY_RELEASED;
@@ -113,15 +119,30 @@ void keyboard_handler(__attribute__((unused)) u32 interrupt) {
             event_type = EVENT_KEY_PRESSED;
         }
 
-        // cut the event bit (allows to use a single table for keys)
-        const u8 bare_scancode = scancode & (0x80 - 1);
-        if (bare_scancode < SCANCODES_KNOWN) {
-            struct keyboard_event event;
-            event.type = event_type;
-            event.key  = scancode_to_key[bare_scancode];
-            event.key_character = key_to_character[event.key];
-            custom_key_handler(event);
+        u16 keycode = scancode & 0x7F;
+        if (extended) {
+            // додаємо префікс 0xE0 для розширених клавіш
+            keycode |= 0xE000;
+            extended = 0;
         }
+
+        struct keyboard_event event;
+        event.type = event_type;
+
+        switch (keycode) {
+            case KEY_ARROW_UP:    event.key = KEY_ARROW_UP; break;
+            case KEY_ARROW_DOWN:  event.key = KEY_ARROW_DOWN; break;
+            case KEY_ARROW_LEFT:  event.key = KEY_ARROW_LEFT; break;
+            case KEY_ARROW_RIGHT: event.key = KEY_ARROW_RIGHT; break;
+            default:
+                if (keycode < SCANCODES_KNOWN)
+                    event.key = scancode_to_key[keycode];
+                else
+                    event.key = 0;
+        }
+
+        event.key_character = (event.key < SCANCODES_KNOWN) ? key_to_character[event.key] : 0;
+        custom_key_handler(event);
     }
 }
 

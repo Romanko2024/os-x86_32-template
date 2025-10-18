@@ -1,5 +1,9 @@
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
+#define KEY_ARROW_UP    0x48
+#define KEY_ARROW_DOWN  0x50
+#define KEY_ARROW_LEFT  0x4B
+#define KEY_ARROW_RIGHT 0x4D
 
 enum key {
     KEY_ESC = 1,
