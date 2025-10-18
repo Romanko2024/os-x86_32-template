@@ -11,24 +11,21 @@ void fs_init() {
 }
 
 int fs_create(const char* name) {
-    //чи файл з таким іменем уже існує
+    // перевірка чи файл уже існує
     for (int i = 0; i < MAX_FILES; i++) {
-        if (files[i].used && strcmp(files[i].name, name) == 0) {
-            return -1; // файл уже існує
-        }
+        if (files[i].used && strcmp(files[i].name, name) == 0)
+            return 0; // уже існує
     }
 
-    //не існує — створюємо новий
     for (int i = 0; i < MAX_FILES; i++) {
         if (!files[i].used) {
             strncpy(files[i].name, name, MAX_FILENAME);
             files[i].content[0] = '\0';
             files[i].used = 1;
-            return 1; //створено
+            return 1; // success
         }
     }
-
-    return 0; // немає місця
+    return 0; // no space
 }
 
 int fs_write(const char* name, const char* text) {
@@ -67,3 +64,24 @@ void fs_list() {
             vga_println(files[i].name);
     }
 }
+
+// знайти файл і повернути вказівник
+File* fs_get(const char* name) {
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (files[i].used && strcmp(files[i].name, name) == 0)
+            return &files[i];
+    }
+    return NULL;
+}
+
+// зберегти оновлений вміст файлу
+int fs_save_content(File* file, const char* new_content) {
+    if (!file)
+        return 0;
+
+    strncpy(file->content, new_content, MAX_CONTENT_SIZE - 1);
+    file->content[MAX_CONTENT_SIZE - 1] = '\0';
+    return 1;
+}
+
+

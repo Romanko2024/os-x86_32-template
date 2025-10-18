@@ -19,4 +19,8 @@ const char* fs_read(const char* name);
 int fs_delete(const char* name);
 void fs_list();
 
+//функції для редактора
+File* fs_get(const char* name);
+int fs_save_content(File* file, const char* new_content);
+
 #endif
