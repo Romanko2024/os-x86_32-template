@@ -193,15 +193,71 @@ void editor_keyboard_event_handler(struct keyboard_event event) {
         editor_update_cursor_pos();
         return;
     }
+
+    // --- Стрілка вгору ---
     if (event.key == KEY_ARROW_UP) {
-        if (edit_offset >= VGA_WIDTH) edit_offset -= VGA_WIDTH;
-        else edit_offset = 0;
-        editor_update_cursor_pos();
-        return;
+    int col = 0;
+    // знайти поточну колонку
+    for (int i = edit_offset - 1; i >= 0 && edit_tmp[i] != '\n'; i--) col++;
+
+    // знайти кінець попереднього рядка
+    int prev_line_end = -1;
+    int i = edit_offset - col - 1;
+    for (; i >= 0; i--) {
+        if (edit_tmp[i] == '\n') {
+            prev_line_end = i;
+            break;
+        }
     }
+
+    if (prev_line_end == -1) {
+        // перший рядок — йдемо на початок
+        edit_offset = 0;
+    } else {
+        // знайти початок попереднього рядка
+        int prev_line_start = prev_line_end;
+        while (prev_line_start > 0 && edit_tmp[prev_line_start - 1] != '\n')
+            prev_line_start--;
+
+        int prev_len = prev_line_end - prev_line_start;
+        if (col > prev_len) col = prev_len;
+        edit_offset = prev_line_start + col;
+    }
+
+    editor_update_cursor_pos();
+    return;
+}
+
+
+    // --- Стрілка вниз ---
     if (event.key == KEY_ARROW_DOWN) {
-        if (edit_offset + VGA_WIDTH <= edit_len) edit_offset += VGA_WIDTH;
-        else edit_offset = edit_len;
+        int col = 0;
+        // знайти поточну колонку
+        for (int i = edit_offset - 1; i >= 0 && edit_tmp[i] != '\n'; i--) col++;
+
+        // знайти початок наступного рядка
+        int next_line_start = -1;
+        for (int i = edit_offset; i < edit_len; i++) {
+            if (edit_tmp[i] == '\n') {
+                next_line_start = i + 1;
+                break;
+            }
+        }
+
+        if (next_line_start == -1) {
+            // останній рядок — лишаємося
+            editor_update_cursor_pos();
+            return;
+        }
+
+        int next_line_end = next_line_start;
+        while (next_line_end < edit_len && edit_tmp[next_line_end] != '\n')
+            next_line_end++;
+
+        int next_len = next_line_end - next_line_start;
+        if (col > next_len) col = next_len;
+        edit_offset = next_line_start + col;
+
         editor_update_cursor_pos();
         return;
     }
