@@ -1,5 +1,6 @@
 #include "../../kernel/kernel.h"
 #include "keyboard.h"
+#include "../../drivers/timer/timer.h"
 
 #define KEYBOARD_DATA_PORT 0x60
 #define SCANCODES_KNOWN 89
@@ -101,47 +102,26 @@ char key_to_character[SCANCODES_KNOWN];
 
 void (*custom_key_handler)(struct keyboard_event event) = 0;
 
-/* Handles the keyboard interrupt */
 void keyboard_handler(__attribute__((unused)) u32 interrupt) {
     static u8 extended = 0;
     const u8 scancode = in(KEYBOARD_DATA_PORT);
 
-    if (scancode == 0xE0) { // початок розширеного коду
-        extended = 1;
-        return;
-    }
+    if (scancode == 0xE0) { extended = 1; return; }
 
     if (custom_key_handler != 0) {
-        enum key_event_type event_type;
-        if (scancode & 0x80) {
-            event_type = EVENT_KEY_RELEASED;
-        } else {
-            event_type = EVENT_KEY_PRESSED;
-        }
-
+        enum key_event_type event_type = (scancode & 0x80) ? EVENT_KEY_RELEASED : EVENT_KEY_PRESSED;
         u16 keycode = scancode & 0x7F;
-        if (extended) {
-            // додаємо префікс 0xE0 для розширених клавіш
-            keycode |= 0xE000;
-            extended = 0;
-        }
+        if (extended) { keycode |= 0xE000; extended = 0; }
 
         struct keyboard_event event;
         event.type = event_type;
-
-        switch (keycode) {
-            case KEY_ARROW_UP:    event.key = KEY_ARROW_UP; break;
-            case KEY_ARROW_DOWN:  event.key = KEY_ARROW_DOWN; break;
-            case KEY_ARROW_LEFT:  event.key = KEY_ARROW_LEFT; break;
-            case KEY_ARROW_RIGHT: event.key = KEY_ARROW_RIGHT; break;
-            default:
-                if (keycode < SCANCODES_KNOWN)
-                    event.key = scancode_to_key[keycode];
-                else
-                    event.key = 0;
-        }
-
+        event.key = (keycode < SCANCODES_KNOWN) ? scancode_to_key[keycode] : 0;
         event.key_character = (event.key < SCANCODES_KNOWN) ? key_to_character[event.key] : 0;
+
+        // скидаємо лічильник бездіяльності при натисканні клавіші
+        if (event_type == EVENT_KEY_PRESSED)
+            reset_idle_counter();
+
         custom_key_handler(event);
     }
 }
