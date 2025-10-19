@@ -24,58 +24,51 @@ static char input_buffer[128];
 static int input_pos = 0;
 
 // ------------------ Редактор ------------------
-static int editing = 0;            // чи в режимі редагування
-static File* edit_file = NULL;     // файл який редагується (вказівник від fs_get)
-static int edit_offset = 0;        // позиція курсору в content (0..len)
-static char edit_tmp[MAX_CONTENT_SIZE]; // тимчасовий буфер (ми будемо редагувати тут)
-static int edit_len = 0;           // поточна довжина в edit_tmp
+static int editing = 0;
+static File* edit_file = NULL;
+static int edit_offset = 0;
+static char edit_tmp[MAX_CONTENT_SIZE];
+static int edit_len = 0;
 
 // ------------------ Допоміжні функції ------------------
 static void shell_show_prompt() {
     vga_print("$ ");
-    input_pos = 0; // скидаємо буфер для нового вводу
+    input_pos = 0;
 }
 
-// перепоз. апаратний курсор з edit_offset
+// перепозиціонування курсора
 static void editor_update_cursor_pos() {
-    int row = edit_offset / VGA_WIDTH;
-    int col = edit_offset % VGA_WIDTH;
+    int row = 0, col = 0;
+    for (int i = 0; i < edit_offset && i < edit_len; i++) {
+        if (edit_tmp[i] == '\n') {
+            row++;
+            col = 0;
+        } else {
+            col++;
+            if (col >= VGA_WIDTH) {
+                row++;
+                col = 0;
+            }
+        }
+    }
     if (row >= VGA_HEIGHT) row = VGA_HEIGHT - 1;
     if (col >= VGA_WIDTH) col = VGA_WIDTH - 1;
     vga_set_cursor(row, col);
 }
 
-// переписати весь вміст редактора з edit_tmp
+// перемальовування всього тексту
 static void editor_redraw() {
     vga_clear();
-    // вивести рядками
-    int i = 0;
-    for ( ; i < edit_len; i++) {
+    for (int i = 0; i < edit_len; i++) {
         vga_putc(edit_tmp[i]);
     }
-    // якщо останній символ — не newline, то курсор  right after last printed char
     editor_update_cursor_pos();
 }
 
-//завершення редагування (зберегти зміни у fs, повернути обробник)
+// завершення редагування (збереження)
 static void editor_finish_and_save() {
     if (!editing || !edit_file) return;
-    // зберегти у fs
-    fs_save_content(edit_file->name, edit_tmp);
-    // повернутися до shell режиму
-    editing = 0;
-    edit_file = NULL;
-    edit_offset = 0;
-    edit_len = 0;
-    // очистити та показати промт
-    vga_clear();
-    shell_show_prompt();
-    // відновити обробник клавіатури shell
-    keyboard_set_handler(shell_keyboard_event_handler);
-}
-
-// відміна редагування без збереження (поки не реалізовано)
-static void editor_abort_without_saving() {
+    fs_save_content(edit_file, edit_tmp);
     editing = 0;
     edit_file = NULL;
     edit_offset = 0;
@@ -95,7 +88,7 @@ void register_command(const char* name, CommandHandler handler) {
     }
 }
 
-// ------------------ Реалізації команд ------------------
+// ------------------ Команди ------------------
 
 static void cmd_help(const char* args);
 static void cmd_clear(const char* args);
@@ -135,10 +128,9 @@ void shell_backspace() {
     extern uint8_t cursor_x;
     extern uint8_t cursor_y;
 
-    // якщо немає введених символів — не дозволяємо стирати промт
     if (input_pos <= 0)
         return;
-    // видаляємо останній символ
+
     if (cursor_x > 0) {
         cursor_x--;
     } else if (cursor_y > 0) {
@@ -152,12 +144,12 @@ void shell_backspace() {
 }
 
 void shell_keypress(char c) {
-    if (c == '\b') { // backspace
+    if (c == '\b') {
         shell_backspace();
         return;
     }
 
-    if (c == '\n') { // enter
+    if (c == '\n') {
         input_buffer[input_pos] = '\0';
         vga_putc('\n');
         execute_command(input_buffer);
@@ -171,17 +163,11 @@ void shell_keypress(char c) {
     }
 }
 
-// ------------------ Обробник подій клавіатури (перенаправляє в shell або editor) ------------------
+// ------------------ Обробник подій клавіатури ------------------
 
 void shell_keyboard_event_handler(struct keyboard_event event) {
     if (event.type != EVENT_KEY_PRESSED) return;
-
-    if (editing) {
-        // у режимі редактора обробляє інший обробник (ми використовуємо editor handler directly)
-        return;
-    }
-
-    // shell режим
+    if (editing) return;
     char c = event.key_character;
     if (c) shell_keypress(c);
 }
@@ -191,45 +177,40 @@ void shell_keyboard_event_handler(struct keyboard_event event) {
 void editor_keyboard_event_handler(struct keyboard_event event) {
     if (event.type != EVENT_KEY_PRESSED) return;
 
-    //if натиснута ESC — зберегти і вийти
     if (event.key == KEY_ESC) {
         editor_finish_and_save();
-        // відновлення клаватурного обробника вже зроблено всередині editor_finish_and_save
         return;
     }
-    
-    //navigation
-    // Переміщення курсора стрілками
-    if (event.key == KEY_ARROW_LEFT) {
-    if (edit_offset > 0) edit_offset--;
-    editor_update_cursor_pos();
-    return;
-}
-if (event.key == KEY_ARROW_RIGHT) {
-    if (edit_offset < edit_len) edit_offset++;
-    editor_update_cursor_pos();
-    return;
-}
-if (event.key == KEY_ARROW_UP) {
-    if (edit_offset >= VGA_WIDTH) edit_offset -= VGA_WIDTH;
-    else edit_offset = 0;
-    editor_update_cursor_pos();
-    return;
-}
-if (event.key == KEY_ARROW_DOWN) {
-    if (edit_offset + VGA_WIDTH <= edit_len) edit_offset += VGA_WIDTH;
-    else edit_offset = edit_len;
-    editor_update_cursor_pos();
-    return;
-}
 
-    // Backspace
+    // --- Стрілки ---
+    if (event.key == KEY_ARROW_LEFT) {
+        if (edit_offset > 0) edit_offset--;
+        editor_update_cursor_pos();
+        return;
+    }
+    if (event.key == KEY_ARROW_RIGHT) {
+        if (edit_offset < edit_len) edit_offset++;
+        editor_update_cursor_pos();
+        return;
+    }
+    if (event.key == KEY_ARROW_UP) {
+        if (edit_offset >= VGA_WIDTH) edit_offset -= VGA_WIDTH;
+        else edit_offset = 0;
+        editor_update_cursor_pos();
+        return;
+    }
+    if (event.key == KEY_ARROW_DOWN) {
+        if (edit_offset + VGA_WIDTH <= edit_len) edit_offset += VGA_WIDTH;
+        else edit_offset = edit_len;
+        editor_update_cursor_pos();
+        return;
+    }
+
+    // --- Backspace ---
     if (event.key == KEY_BACKSPACE) {
         if (edit_offset > 0) {
-            // зсунути все зліва на одну позицію вліво
-            for (int i = edit_offset - 1; i < edit_len - 1; i++) {
+            for (int i = edit_offset - 1; i < edit_len - 1; i++)
                 edit_tmp[i] = edit_tmp[i + 1];
-            }
             edit_len--;
             edit_tmp[edit_len] = '\0';
             edit_offset--;
@@ -238,13 +219,11 @@ if (event.key == KEY_ARROW_DOWN) {
         return;
     }
 
-    // Enter (вставляємо '\n')
+    // --- Enter ---
     if (event.key == KEY_ENTER) {
         if (edit_len + 1 < MAX_CONTENT_SIZE) {
-            // shift right від edit_offset, вставити '\n'
-            for (int i = edit_len; i >= edit_offset; i--) {
+            for (int i = edit_len; i >= edit_offset; i--)
                 edit_tmp[i + 1] = edit_tmp[i];
-            }
             edit_tmp[edit_offset] = '\n';
             edit_len++;
             edit_offset++;
@@ -253,42 +232,35 @@ if (event.key == KEY_ARROW_DOWN) {
         return;
     }
 
-    // вставка звичайного символа (якщо є key_character і є місце)
+    // --- Введення символів ---
     if (event.key_character && edit_len + 1 < MAX_CONTENT_SIZE) {
         char ch = event.key_character;
-        // вставити ch в edit_tmp на позицію edit_offset
-        for (int i = edit_len; i >= edit_offset; i--) {
+        for (int i = edit_len; i >= edit_offset; i--)
             edit_tmp[i + 1] = edit_tmp[i];
-        }
         edit_tmp[edit_offset] = ch;
         edit_len++;
         edit_offset++;
         editor_redraw();
         return;
     }
-
-    // інші клавіші — ігнор
 }
 
-// ------------------ Режим редагування: старт ------------------
+// ------------------ Режим редагування ------------------
 
 static void start_edit_mode(File* f) {
     if (!f) return;
     editing = 1;
     edit_file = f;
-    // копіюємо вміст у тимчасовий буфер
+
     size_t i = 0;
     for (; i < MAX_CONTENT_SIZE - 1 && f->content[i] != '\0'; i++) {
         edit_tmp[i] = f->content[i];
     }
     edit_len = (int)i;
     edit_tmp[edit_len] = '\0';
-    edit_offset = edit_len; // починати в кінці
+    edit_offset = edit_len;
 
-    // показати файл на екрані
     editor_redraw();
-
-    // підмінити обробник клавіатури на редакторський
     keyboard_set_handler(editor_keyboard_event_handler);
 }
 
@@ -329,7 +301,7 @@ static void cmd_help(const char* args) {
     vga_println("  delete <name>  - delete file");
     vga_println("  list           - list all files");
     vga_println("  screensaver");
-    vga_println("  edit <name>    - edit file (use [ ] , . for nav, Esc to save & exit)");
+    vga_println("  edit <name>    - edit file (Esc to save & exit)");
 }
 
 static void cmd_clear(const char* args) {
@@ -397,7 +369,6 @@ static void cmd_delete(const char* args) {
         vga_println("File not found.");
 }
 
-// команда edit
 static void cmd_edit(const char* args) {
     if (strlen(args) == 0) {
         vga_println("Usage: edit <filename>");
@@ -408,7 +379,6 @@ static void cmd_edit(const char* args) {
         vga_println("File not found.");
         return;
     }
-    // стартуємо режим редагування
     start_edit_mode(f);
 }
 
