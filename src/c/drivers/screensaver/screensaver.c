@@ -5,12 +5,9 @@
 #include "../../shell/shell.h"
 #include <stdint.h>
 
-// extern змінні з VGA-драйвера
 extern uint16_t* vga_buffer;
 extern uint8_t cursor_x;
 extern uint8_t cursor_y;
-
-//таймерний обробник
 extern void timer_tick_handler();
 
 //обробник клавіатури
@@ -27,88 +24,152 @@ static int anim_x = 0;
 static int anim_y = 0;
 static int anim_dx = 1;
 static int anim_dy = 1;
-static const char anim_char = '*';
 
-// таймер функ.
-void screensaver_timer_handler() {
-    // очищення екрана
-    for (int y = 0; y < VGA_HEIGHT; y++) {
-        for (int x = 0; x < VGA_WIDTH; x++) {
-            vga_put_char_at(' ', y, x);
+// --- час і перемикання ---
+static int frame_counter = 0;
+static int current_pattern = 0;
+#define SWITCH_INTERVAL 90
+
+typedef struct {
+    int dx;
+    int dy;
+    char c;
+} StarPart;
+
+// ====== Візерунки ======
+
+static const StarPart pattern_comet[] = {
+    {0, 0, '*'},
+    {-1, 0, '*'},
+    {1, 0, '*'},
+    {0, -1, '*'},
+    {0, 1, '*'},
+    {-1, -1, '.'},
+    {1, 1, '.'},
+    {-1, 1, '.'},
+    {1, -1, '.'}
+};
+
+static const StarPart pattern_box[] = {
+    {-1, -1, '*'}, {0, -1, '*'}, {1, -1, '*'},
+    {-1, 0, '*'},                {1, 0, '*'},
+    {-1, 1, '*'},  {0, 1, '*'},  {1, 1, '*'}
+};
+
+static const StarPart pattern_cross[] = {
+    {0, 0, '*'},
+    {0, -1, '*'}, {0, 1, '*'},
+    {-1, 0, '*'}, {1, 0, '*'},
+    {0, -2, '.'}, {0, 2, '.'},
+    {-2, 0, '.'}, {2, 0, '.'}
+};
+
+typedef struct {
+    const StarPart* shape;
+    int len;
+} Pattern;
+
+static const Pattern patterns[] = {
+    {pattern_comet, sizeof(pattern_comet) / sizeof(StarPart)},
+    {pattern_box, sizeof(pattern_box) / sizeof(StarPart)},
+    {pattern_cross, sizeof(pattern_cross) / sizeof(StarPart)}
+};
+#define PATTERN_COUNT (sizeof(patterns) / sizeof(Pattern))
+
+// ====== малювання ======
+static void draw_star(int y, int x) {
+    const Pattern* p = &patterns[current_pattern];
+    for (int i = 0; i < p->len; i++) {
+        int sx = x + p->shape[i].dx;
+        int sy = y + p->shape[i].dy;
+        if (sx >= 0 && sx < VGA_WIDTH && sy >= 0 && sy < VGA_HEIGHT) {
+            vga_put_char_at(p->shape[i].c, sy, sx);
         }
     }
+}
 
-    //рух символу
+static void clear_star(int y, int x) {
+    const Pattern* p = &patterns[current_pattern];
+    for (int i = 0; i < p->len; i++) {
+        int sx = x + p->shape[i].dx;
+        int sy = y + p->shape[i].dy;
+        if (sx >= 0 && sx < VGA_WIDTH && sy >= 0 && sy < VGA_HEIGHT) {
+            vga_put_char_at(' ', sy, sx);
+        }
+    }
+}
+
+void screensaver_timer_handler() {
+    // очищення попереднього кадру
+    clear_star(anim_y, anim_x);
+
+    // рух символу
     anim_x += anim_dx;
     anim_y += anim_dy;
 
-    if (anim_x <= 0) { anim_x = 0; anim_dx = 1; }
-    if (anim_x >= VGA_WIDTH - 1) { anim_x = VGA_WIDTH - 1; anim_dx = -1; }
-    if (anim_y <= 0) { anim_y = 0; anim_dy = 1; }
-    if (anim_y >= VGA_HEIGHT - 1) { anim_y = VGA_HEIGHT - 1; anim_dy = -1; }
+    if (anim_x <= 1) { anim_x = 1; anim_dx = 1; }
+    if (anim_x >= VGA_WIDTH - 2) { anim_x = VGA_WIDTH - 2; anim_dx = -1; }
+    if (anim_y <= 1) { anim_y = 1; anim_dy = 1; }
+    if (anim_y >= VGA_HEIGHT - 2) { anim_y = VGA_HEIGHT - 2; anim_dy = -1; }
 
-    //відображення символу
-    vga_put_char_at(anim_char, anim_y, anim_x);
+    //малювання нового кадру
+    draw_star(anim_y, anim_x);
 
-    // прибирання курсора
+    // лічильник кадрів
+    frame_counter++;
+    if (frame_counter >= SWITCH_INTERVAL) {
+        frame_counter = 0;
+        current_pattern = (current_pattern + 1) % PATTERN_COUNT;
+    }
+
     vga_set_cursor(VGA_HEIGHT - 1, 0);
 }
 
-// обробник клавіатури під screensaver
 void screensaver_key_handler(struct keyboard_event event) {
     if (event.type == EVENT_KEY_PRESSED) {
         screensaver_stop();
     }
 }
-// запуск screensaver
+
 void screensaver_start() {
     if (active) return;
 
-    // зберігання VGA буфера і поз. курсора
     for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
         saved_buffer[i] = vga_buffer[i];
     }
     saved_cursor_x = cursor_x;
     saved_cursor_y = cursor_y;
 
-    // очищення екрана
     vga_clear();
 
-    // ініц положення символу
     anim_x = VGA_WIDTH / 2;
     anim_y = VGA_HEIGHT / 2;
     anim_dx = 1;
     anim_dy = 1;
+    frame_counter = 0;
+    current_pattern = 0;
 
-    // заміна обробника клавіатури
     keyboard_set_handler(screensaver_key_handler);
-
-    // таймер
     timer_set_handler(screensaver_timer_handler);
 
     active = 1;
 }
 
-// зупинка screensaver і відновлення 
 void screensaver_stop() {
     if (!active) return;
 
-    //відновлення VGA буфера
     for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
         vga_buffer[i] = saved_buffer[i];
     }
 
-    //відновлення позиції курсора
     vga_set_cursor(saved_cursor_y, saved_cursor_x);
 
-    //відновлення обробників клавіатури та таймера
     keyboard_set_handler(shell_keyboard_event_handler);
     timer_set_handler(timer_tick_handler);
 
     active = 0;
 }
 
-// статус чек
 int screensaver_is_active() {
     return active;
 }
